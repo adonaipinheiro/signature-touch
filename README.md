@@ -1,8 +1,11 @@
-[![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml)
+[![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/adonaipinheiro/signature-touch/graph/badge.svg?token=CS223H7TQR)](https://codecov.io/github/adonaipinheiro/signature-touch)
 
 # react-native-signature-touch
 
 A lightweight and flexible React Native library for capturing smooth, customizable signatures using SVG.
+
+## Example
+<img src="https://github.com/user-attachments/assets/63990a48-5e81-4dbd-8293-c497ce0f3afe" width="250" />
 
 ## Features
 
