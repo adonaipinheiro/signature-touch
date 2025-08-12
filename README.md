@@ -1,3 +1,5 @@
+[![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml)
+
 # react-native-signature-touch
 
 A lightweight and flexible React Native library for capturing smooth, customizable signatures using SVG.
