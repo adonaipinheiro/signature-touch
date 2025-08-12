@@ -26,8 +26,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
-      - run: yarn lint
-      - run: yarn typecheck
+      - name: Lint
+        run: yarn lint
+      - name: Typecheck
+        run: yarn typecheck
 
   test:
     runs-on: ubuntu-latest
@@ -36,7 +38,8 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
-      - run: yarn test --maxWorkers=2 --coverage
+      - name: Unit tests
+        run: yarn test --maxWorkers=2 --coverage
       - name: Upload coverage
         if: success()
         uses: actions/upload-artifact@v4
@@ -94,7 +97,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Publica se for a primeira vez ou se houver bump recomendado
+      # Gate: publica se for a primeira vez ou se houver bump recomendado (preset conventionalcommits)
       - name: Determine if release is needed
         id: need
         shell: bash
@@ -104,7 +107,8 @@ jobs:
             echo "reason=first_release" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          npx --yes conventional-recommended-bump -p angular > bump.json
+          npx --yes conventional-recommended-bump --preset conventionalcommits --tag-prefix v --commit-path . > bump.json
+          cat bump.json
           LEVEL=$(node -e "console.log(require('./bump.json').releaseType || '')")
           if [ -n "$LEVEL" ]; then
             echo "reason=$LEVEL" >> "$GITHUB_OUTPUT"
@@ -112,7 +116,7 @@ jobs:
             echo "reason=" >> "$GITHUB_OUTPUT"
           fi
 
-      # Cria versão/tag e publica no npm (release-it com github.release=false)
+      # Versiona, cria tag e publica no npm (release-it com github.release=false)
       - name: Run release-it (version, tag, npm publish)
         if: steps.need.outputs.reason != ''
         env:
@@ -121,18 +125,43 @@ jobs:
           RELEASE_IT_DEBUG: "true"
         run: yarn ci:release
 
-      # Cria o GitHub Release pela tag recém-criada
       - name: Get latest tag
         if: steps.need.outputs.reason != ''
         id: tag
         run: echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Create tarball for release asset
+        if: steps.need.outputs.reason != ''
+        run: |
+          mkdir -p out
+          npm pack --pack-destination ./out
+          ls -l out
+
+      - name: Extract CHANGELOG section for this tag
+        if: steps.need.outputs.reason != ''
+        id: notes
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          VER="${TAG#v}"
+          awk -v ver="$VER" '
+            BEGIN{found=0}
+            /^##[[:space:]]+v?'"$VER"'\b/ {found=1; print; next}
+            /^##[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+/ && found==1 {exit}
+            found==1 {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md || true
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "CHANGELOG section not found for $VER" > RELEASE_NOTES.md
+          fi
 
       - name: Create GitHub Release
         if: steps.need.outputs.reason != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          generate_release_notes: true
+          files: out/*.tgz
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -177,6 +206,27 @@ jobs:
       - name: Validate publish content
         run: npm pack --dry-run
 
+      - name: Create tarball for release asset
+        run: |
+          mkdir -p out
+          npm pack --pack-destination ./out
+          ls -l out
+
+      - name: Extract CHANGELOG section for this tag
+        id: notes
+        shell: bash
+        run: |
+          VER="${{ steps.v.outputs.ver }}"
+          awk -v ver="$VER" '
+            BEGIN{found=0}
+            /^##[[:space:]]+v?'"$VER"'\b/ {found=1; print; next}
+            /^##[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+/ && found==1 {exit}
+            found==1 {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md || true
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "CHANGELOG section not found for $VER" > RELEASE_NOTES.md
+          fi
+
       - name: npm publish (provenance)
         env:
           NPM_CONFIG_PROVENANCE: true
@@ -186,6 +236,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.v.outputs.tag }}
-          generate_release_notes: true
+          files: out/*.tgz
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
