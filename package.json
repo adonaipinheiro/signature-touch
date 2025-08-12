@@ -48,14 +48,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adonaipinheiro/react-native-signature-touch.git"
+    "url": "https://github.com/adonaipinheiro/signature-touch"
   },
   "author": "Adonai Pinheiro <adonaijpinheiro@gmail.com> (https://github.com/adonaipinheiro)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/adonaipinheiro/react-native-signature-touch/issues"
+    "url": "https://github.com/adonaipinheiro/signature-touch/issues"
   },
-  "homepage": "https://github.com/adonaipinheiro/react-native-signature-touch#readme",
+  "homepage": "https://github.com/adonaipinheiro/signature-touch#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
