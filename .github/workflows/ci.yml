@@ -1,64 +1,103 @@
 name: CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   merge_group:
-    types:
-      - checks_requested
+    types: [checks_requested]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
+      - uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
-
-      - name: Lint files
-        run: yarn lint
-
-      - name: Typecheck files
-        run: yarn typecheck
+      - run: yarn lint
+      - run: yarn typecheck
 
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
+      - uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
-
-      - name: Run unit tests
-        run: yarn test --maxWorkers=2 --coverage
+      - run: yarn test --maxWorkers=2 --coverage
+      - name: Upload coverage
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
 
   build-library:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
+      - uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
-
-      - name: Build package
+      - name: Build (bob)
         run: yarn prepare
+      - name: Validate publish content
+        run: npm pack --dry-run
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-build
+          path: |
+            lib/**
+            *.tgz
+            package.json
+            README.md
+            LICENSE
 
-  build-web:
+  release:
+    name: Release (auto)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint, test, build-library]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # necessário para criar tag e GitHub Release
+      id-token: write   # opcional (proveniência futura)
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Build example for Web
+      - name: Git user (bot)
         run: |
-          yarn example expo export --platform web
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Opcional: pular release se não houver commits convencionais desde a última tag
+      - name: Dry run to check if a release is needed
+        id: dry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx release-it --ci --dry-run | tee dryrun.log
+          if ! grep -q "Release type:" dryrun.log; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run release-it (create tag, GH release, npm publish)
+        if: steps.dry.outputs.skip != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn ci:release
