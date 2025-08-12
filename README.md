@@ -4,6 +4,9 @@
 
 A lightweight and flexible React Native library for capturing smooth, customizable signatures using SVG.
 
+## Example
+<img src="https://github.com/user-attachments/assets/63990a48-5e81-4dbd-8293-c497ce0f3afe" width="250" />
+
 ## Features
 
 - ✏️ **Smooth signature capture** with quadratic curves
