@@ -1,4 +1,4 @@
-[![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml)
+[![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/adonaipinheiro/signature-touch/graph/badge.svg?token=CS223H7TQR)](https://codecov.io/github/adonaipinheiro/signature-touch)
 
 # react-native-signature-touch
 
