@@ -7,6 +7,11 @@ coverage
 # XDE
 .expo/
 
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.pnp.*
+
 # VSCode
 .vscode/
 jsconfig.json
