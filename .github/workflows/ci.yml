@@ -1,51 +1,107 @@
 name: CI
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   merge_group:
-    types:
-      - checks_requested
+    types: [checks_requested]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  lint:
+  build-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@v4
 
       - name: Setup
+      # seu composite com cache do yarn etc.
         uses: ./.github/actions/setup
 
-      - name: Lint files
+      - name: Lint
         run: yarn lint
 
-      - name: Typecheck files
+      - name: Typecheck
         run: yarn typecheck
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Setup
-        uses: ./.github/actions/setup
-
-      - name: Run unit tests
+      - name: Unit tests
         run: yarn test --maxWorkers=2 --coverage
 
-  build-library:
+      - name: Build (bob)
+        run: yarn prepare
+
+  release_on_main:
+    name: Release & Publish
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [build-test]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write     # commit/tag
+      id-token: write     # npm --provenance
     steps:
-      - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Checkout full history (with push creds)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Build package
-        run: yarn prepare
+      - name: Git user (bot)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Versiona, cria tag, gera CHANGELOG e PUBLICA no npm
+      - name: Run release-it (auto)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: yarn ci:release
+
+      # Anexa o .tgz no GitHub Release (e usa a seção do CHANGELOG)
+      - name: Get latest tag
+        id: tag
+        run: echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Create tarball for release asset
+        run: |
+          mkdir -p out
+          npm pack --pack-destination ./out
+          ls -l out
+
+      - name: Extract CHANGELOG section for this tag
+        id: notes
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          VER="${TAG#v}"
+          awk -v ver="$VER" '
+            BEGIN{found=0}
+            /^##[[:space:]]+v?'"$VER"'\b/ {found=1; print; next}
+            /^##[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+/ && found==1 {exit}
+            found==1 {print}
+          ' CHANGELOG.md > RELEASE_NOTES.md || true
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "CHANGELOG section not found for $VER" > RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: out/*.tgz
+          body_path: RELEASE_NOTES.md
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
