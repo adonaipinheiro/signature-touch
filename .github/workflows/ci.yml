@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
   merge_group:
@@ -12,11 +14,16 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: none
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
       - run: yarn lint
@@ -25,7 +32,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
       - run: yarn test --maxWorkers=2 --coverage
@@ -39,7 +47,8 @@ jobs:
   build-library:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Setup
         uses: ./.github/actions/setup
       - name: Build (bob)
@@ -57,19 +66,20 @@ jobs:
             README.md
             LICENSE
 
-  release:
-    name: Release (auto)
+  release_on_main:
+    name: Release (push em main)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: [lint, test, build-library]
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # necessário para criar tag e GitHub Release
-      id-token: write   # opcional (proveniência futura)
+      contents: write
+      id-token: write
     steps:
-      - name: Checkout full history
+      - name: Checkout full history (with push creds)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -84,20 +94,83 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Opcional: pular release se não houver commits convencionais desde a última tag
-      - name: Dry run to check if a release is needed
-        id: dry
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Gate robusto: publica se for a primeira vez ou se houver bump recomendado
+      - name: Determine if release is needed
+        id: need
+        shell: bash
         run: |
-          npx release-it --ci --dry-run | tee dryrun.log
-          if ! grep -q "Release type:" dryrun.log; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+          if ! git describe --tags --match "v*" --abbrev=0 >/dev/null 2>&1; then
+            echo "reason=first_release" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          npx --yes conventional-recommended-bump -p angular > bump.json
+          cat bump.json
+          LEVEL=$(node -e "console.log(require('./bump.json').releaseType || '')")
+          if [ -n "$LEVEL" ]; then
+            echo "reason=$LEVEL" >> "$GITHUB_OUTPUT"
+          else
+            echo "reason=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run release-it (create tag, GH release, npm publish)
-        if: steps.dry.outputs.skip != 'true'
+      - name: Run release-it (version, tag, GH release, npm publish)
+        if: steps.need.outputs.reason != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          RELEASE_IT_DEBUG: "true"
         run: yarn ci:release
+
+  release_on_tag:
+    name: Release (por tag)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Configure npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Extract version from tag
+        id: v
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "ver=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate package.json version matches tag
+        run: |
+          PKG_VER=$(node -p "require('./package.json').version")
+          if [ "$PKG_VER" != "${{ steps.v.outputs.ver }}" ]; then
+            echo "package.json version ($PKG_VER) != tag version (${{ steps.v.outputs.ver }})"
+            exit 1
+          fi
+
+      - name: Build (bob)
+        run: yarn prepare
+
+      - name: Validate publish content
+        run: npm pack --dry-run
+
+      - name: npm publish (provenance)
+        env:
+          NPM_CONFIG_PROVENANCE: true
+        run: npm publish --access public --provenance
+
+      - name: Create GitHub Release (if missing)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.v.outputs.tag }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
