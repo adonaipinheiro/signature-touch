@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.1.3 (2025-08-12)</small>
+
+* fix: testing CI ([02c13c9](https://github.com/adonaipinheiro/signature-touch/commit/02c13c9))
+
 ## <small>0.1.2 (2025-08-12)</small>
 
 ## <small>0.1.1 (2025-08-12)</small>
