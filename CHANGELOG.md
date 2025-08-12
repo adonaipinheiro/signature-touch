@@ -1,5 +1,7 @@
 # Changelog
 
+## <small>0.1.2 (2025-08-12)</small>
+
 ## <small>0.1.1 (2025-08-12)</small>
 
 * chore: back to older CI ([63997e7](https://github.com/adonaipinheiro/signature-touch/commit/63997e7))
