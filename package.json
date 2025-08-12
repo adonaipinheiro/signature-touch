@@ -111,22 +111,20 @@
       "requireCleanWorkingDir": false
     },
     "npm": {
-      "publish": true
+      "publish": true,
+      "publishArgs": [
+        "--provenance",
+        "--access",
+        "public"
+      ]
     },
     "github": {
       "release": true
     },
     "hooks": {
-      "before:init": [
-        "echo '🔎 Determinando versão via conventional commits...'"
-      ],
       "before:npm": [
-        "echo '🏗️  Buildando pacote com bob...'",
         "yarn prepare",
         "npm pack --dry-run"
-      ],
-      "after:release": [
-        "echo '✅ Release publicada: ${name}@${version}'"
       ]
     },
     "plugins": {
