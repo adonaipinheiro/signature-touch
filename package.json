@@ -1,6 +1,6 @@
 {
   "name": "react-native-signature-touch",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "A lightweight signature capture library for React Native apps",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
@@ -72,8 +72,6 @@
     "@types/jest": "^29.5.5",
     "@types/react": "^19.0.12",
     "commitlint": "^19.6.1",
-    "conventional-changelog-conventionalcommits": "^9.1.0",
-    "conventional-recommended-bump": "^11.2.0",
     "del-cli": "^5.1.0",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
@@ -121,7 +119,7 @@
       ]
     },
     "github": {
-      "release": false
+      "release": true
     },
     "hooks": {
       "before:npm": [
@@ -132,7 +130,7 @@
     "plugins": {
       "@release-it/conventional-changelog": {
         "preset": {
-          "name": "conventionalcommits"
+          "name": "angular"
         },
         "infile": "CHANGELOG.md"
       }

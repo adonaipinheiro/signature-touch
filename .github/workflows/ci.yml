@@ -1,243 +1,51 @@
 name: CI
-
 on:
   push:
-    branches: [main]
-    tags:
-      - 'v*'
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   merge_group:
-    types: [checks_requested]
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  id-token: none
+    types:
+      - checks_requested
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Setup
         uses: ./.github/actions/setup
-      - name: Lint
+
+      - name: Lint files
         run: yarn lint
-      - name: Typecheck
+
+      - name: Typecheck files
         run: yarn typecheck
 
   test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Setup
         uses: ./.github/actions/setup
-      - name: Unit tests
+
+      - name: Run unit tests
         run: yarn test --maxWorkers=2 --coverage
-      - name: Upload coverage
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage
-          path: coverage
 
   build-library:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Setup
         uses: ./.github/actions/setup
-      - name: Build (bob)
+
+      - name: Build package
         run: yarn prepare
-      - name: Validate publish content
-        run: npm pack --dry-run
-      - name: Upload package artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: package-build
-          path: |
-            lib/**
-            *.tgz
-            package.json
-            README.md
-            LICENSE
-
-  release_on_main:
-    name: Release (push em main)
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [lint, test, build-library]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write     # criar commit/tag e Release
-      id-token: write     # necessário p/ npm --provenance
-    steps:
-      - name: Checkout full history (with push creds)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Setup
-        uses: ./.github/actions/setup
-
-      - name: Git user (bot)
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Configure npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # Gate: publica se for a primeira vez ou se houver bump recomendado (preset conventionalcommits)
-      - name: Determine if release is needed
-        id: need
-        shell: bash
-        run: |
-          set -euo pipefail
-          if ! git describe --tags --match "v*" --abbrev=0 >/dev/null 2>&1; then
-            echo "reason=first_release" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          npx --yes conventional-recommended-bump --preset conventionalcommits --tag-prefix v --commit-path . > bump.json
-          cat bump.json
-          LEVEL=$(node -e "console.log(require('./bump.json').releaseType || '')")
-          if [ -n "$LEVEL" ]; then
-            echo "reason=$LEVEL" >> "$GITHUB_OUTPUT"
-          else
-            echo "reason=" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Versiona, cria tag e publica no npm (release-it com github.release=false)
-      - name: Run release-it (version, tag, npm publish)
-        if: steps.need.outputs.reason != ''
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          RELEASE_IT_DEBUG: "true"
-        run: yarn ci:release
-
-      - name: Get latest tag
-        if: steps.need.outputs.reason != ''
-        id: tag
-        run: echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
-
-      - name: Create tarball for release asset
-        if: steps.need.outputs.reason != ''
-        run: |
-          mkdir -p out
-          npm pack --pack-destination ./out
-          ls -l out
-
-      - name: Extract CHANGELOG section for this tag
-        if: steps.need.outputs.reason != ''
-        id: notes
-        shell: bash
-        run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          VER="${TAG#v}"
-          awk -v ver="$VER" '
-            BEGIN{found=0}
-            /^##[[:space:]]+v?'"$VER"'\b/ {found=1; print; next}
-            /^##[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+/ && found==1 {exit}
-            found==1 {print}
-          ' CHANGELOG.md > RELEASE_NOTES.md || true
-          if [ ! -s RELEASE_NOTES.md ]; then
-            echo "CHANGELOG section not found for $VER" > RELEASE_NOTES.md
-          fi
-
-      - name: Create GitHub Release
-        if: steps.need.outputs.reason != ''
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          files: out/*.tgz
-          body_path: RELEASE_NOTES.md
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release_on_tag:
-    name: Release (por tag)
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [lint, test]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - name: Checkout tag
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Setup
-        uses: ./.github/actions/setup
-      - name: Configure npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Extract version from tag
-        id: v
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "ver=${TAG#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Validate package.json version matches tag
-        run: |
-          PKG_VER=$(node -p "require('./package.json').version")
-          if [ "$PKG_VER" != "${{ steps.v.outputs.ver }}" ]; then
-            echo "package.json version ($PKG_VER) != tag version (${{ steps.v.outputs.ver }})"
-            exit 1
-          fi
-
-      - name: Build (bob)
-        run: yarn prepare
-
-      - name: Validate publish content
-        run: npm pack --dry-run
-
-      - name: Create tarball for release asset
-        run: |
-          mkdir -p out
-          npm pack --pack-destination ./out
-          ls -l out
-
-      - name: Extract CHANGELOG section for this tag
-        id: notes
-        shell: bash
-        run: |
-          VER="${{ steps.v.outputs.ver }}"
-          awk -v ver="$VER" '
-            BEGIN{found=0}
-            /^##[[:space:]]+v?'"$VER"'\b/ {found=1; print; next}
-            /^##[[:space:]]+v?[0-9]+\.[0-9]+\.[0-9]+/ && found==1 {exit}
-            found==1 {print}
-          ' CHANGELOG.md > RELEASE_NOTES.md || true
-          if [ ! -s RELEASE_NOTES.md ]; then
-            echo "CHANGELOG section not found for $VER" > RELEASE_NOTES.md
-          fi
-
-      - name: npm publish (provenance)
-        env:
-          NPM_CONFIG_PROVENANCE: true
-        run: npm publish --access public --provenance
-
-      - name: Create GitHub Release (if missing)
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.v.outputs.tag }}
-          files: out/*.tgz
-          body_path: RELEASE_NOTES.md
-          generate_release_notes: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
