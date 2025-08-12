@@ -1,4 +1,4 @@
-import React, { createRef } from 'react';
+import { createRef } from 'react';
 import { render, act } from '@testing-library/react-native';
 
 // mock react-native-svg to provide toDataURL
@@ -8,9 +8,10 @@ const mockToDataURL = jest.fn((cb: (data: string) => void, _opts: any) =>
 
 jest.mock('react-native-svg', () => {
   const React = require('react');
-  const Svg = React.forwardRef((props: any, ref: any) => {
+  const Svg = React.forwardRef((_: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
-      toDataURL: (...args: any[]) => mockToDataURL(...args),
+      toDataURL: (...args: any[]) =>
+        (mockToDataURL as (...a: any[]) => any)(...args),
     }));
     return null;
   });
@@ -199,8 +200,10 @@ describe('Signature component', () => {
     const svg = ref.current!.getSvg();
     expect(svg.svg).not.toContain('<rect');
     await ref.current!.getImage();
-    const [, opts] =
-      mockToDataURL.mock.calls[mockToDataURL.mock.calls.length - 1];
+    const [, opts] = (mockToDataURL.mock.calls.at(-1) ?? []) as [
+      (data: string) => void,
+      any,
+    ];
     expect(opts.backgroundColor).toBeUndefined();
   });
 });
