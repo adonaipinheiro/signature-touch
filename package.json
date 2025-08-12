@@ -119,7 +119,7 @@
       ]
     },
     "github": {
-      "release": true
+      "release": false
     },
     "hooks": {
       "before:npm": [

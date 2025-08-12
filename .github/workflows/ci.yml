@@ -72,8 +72,8 @@ jobs:
     needs: [lint, test, build-library]
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      id-token: write
+      contents: write     # criar commit/tag e Release
+      id-token: write     # necessário p/ npm --provenance
     steps:
       - name: Checkout full history (with push creds)
         uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Gate robusto: publica se for a primeira vez ou se houver bump recomendado
+      # Publica se for a primeira vez ou se houver bump recomendado
       - name: Determine if release is needed
         id: need
         shell: bash
@@ -105,7 +105,6 @@ jobs:
             exit 0
           fi
           npx --yes conventional-recommended-bump -p angular > bump.json
-          cat bump.json
           LEVEL=$(node -e "console.log(require('./bump.json').releaseType || '')")
           if [ -n "$LEVEL" ]; then
             echo "reason=$LEVEL" >> "$GITHUB_OUTPUT"
@@ -113,13 +112,29 @@ jobs:
             echo "reason=" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run release-it (version, tag, GH release, npm publish)
+      # Cria versão/tag e publica no npm (release-it com github.release=false)
+      - name: Run release-it (version, tag, npm publish)
         if: steps.need.outputs.reason != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           RELEASE_IT_DEBUG: "true"
         run: yarn ci:release
+
+      # Cria o GitHub Release pela tag recém-criada
+      - name: Get latest tag
+        if: steps.need.outputs.reason != ''
+        id: tag
+        run: echo "tag=$(git describe --tags --abbrev=0)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        if: steps.need.outputs.reason != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release_on_tag:
     name: Release (por tag)
