@@ -1,4 +1,7 @@
-[![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/adonaipinheiro/signature-touch/graph/badge.svg?token=CS223H7TQR)](https://codecov.io/github/adonaipinheiro/signature-touch)
+[![npm version](https://img.shields.io/npm/v/react-native-signature-touch.svg)](https://www.npmjs.com/package/react-native-signature-touch)
+ [![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/adonaipinheiro/signature-touch/graph/badge.svg?token=CS223H7TQR)](https://codecov.io/github/adonaipinheiro/signature-touch) [![install size](https://packagephobia.com/badge?p=react-native-signature-touch)](https://packagephobia.com/result?p=react-native-signature-touch) [![npm downloads](https://img.shields.io/npm/dm/react-native-signature-touch.svg)](https://www.npmjs.com/package/react-native-signature-touch) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
+
 
 # react-native-signature-touch
 
