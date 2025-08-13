@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.3.4 (2025-08-13)</small>
+
+* chore: adjust regex ([2405dbe](https://github.com/adonaipinheiro/signature-touch/commit/2405dbe))
+
 ## <small>0.3.3 (2025-08-13)</small>
 
 * chore: fix changelog script ([e87ca9d](https://github.com/adonaipinheiro/signature-touch/commit/e87ca9d))
