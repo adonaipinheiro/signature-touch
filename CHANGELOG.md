@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.3.1 (2025-08-13)</small>
+
+* chore: update README.md ([9b79b6c](https://github.com/adonaipinheiro/signature-touch/commit/9b79b6c))
+
 ## 0.3.0 (2025-08-13)
 
 * feat: add AGENTS.md for Codex ([f52ce15](https://github.com/adonaipinheiro/signature-touch/commit/f52ce15))
