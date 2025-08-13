@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.3.3 (2025-08-13)</small>
+
+* chore: fix changelog script ([e87ca9d](https://github.com/adonaipinheiro/signature-touch/commit/e87ca9d))
+
 ## <small>0.3.2 (2025-08-13)</small>
 
 * chore: update package.json ([42728b1](https://github.com/adonaipinheiro/signature-touch/commit/42728b1))
