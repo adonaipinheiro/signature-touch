@@ -43,8 +43,26 @@
   },
   "keywords": [
     "react-native",
+    "react-component",
+    "react-native-component",
     "ios",
-    "android"
+    "android",
+    "signature",
+    "sign",
+    "e-sign",
+    "e-signature",
+    "digital-signature",
+    "signature-capture",
+    "sign-capture",
+    "touch-signature",
+    "draw",
+    "drawing",
+    "canvas",
+    "react-native-canvas",
+    "signature-pad",
+    "react-native-signature-pad",
+    "trim",
+    "whitespace"
   ],
   "repository": {
     "type": "git",
