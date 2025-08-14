@@ -85,24 +85,27 @@ jobs:
           npm pack --pack-destination ./out
           ls -l out
 
-      - name: Extract CHANGELOG section for this tag
+      - name: Extract latest RELEASE notes from CHANGELOG.md
         id: notes
         shell: bash
         run: |
-          TAG="${{ steps.tag.outputs.tag }}"
-          VER="${TAG#v}"
-
-          awk -v ver="$VER" '
+          awk '
             BEGIN { found=0 }
-            $0 ~ ("^##[[:space:]]+\\[?v?" ver "\\]?([[:space:]]|$)") { found=1; print; next }
+            # Pula "Unreleased"
+            /^[[:space:]]*##[[:space:]]+\[?[Uu]nreleased\]?/ { if (found==0) next }
 
-            found && $0 ~ "^##[[:space:]]+\\[?v?[0-9]+\\.[0-9]+\\.[0-9]+(-[A-Za-z0-9.]+)?\\]?" { exit }
+            # Início: primeiro cabeçalho de versão (## vX.Y.Z, ## X.Y.Z, com [] e pre-release opcionais)
+            found==0 && $0 ~ /^##[[:space:]]+\[?v?[0-9]+\.[0-9]+\.[0-9]+([-.][A-Za-z0-9.]+)?\]?([[:space:]]|$)/ { found=1; print; next }
 
-            found { print }
+            # Fim: próximo cabeçalho de nível 2 (## ...)
+            found==1 && /^##[[:space:]]/ { exit }
+
+            # Conteúdo dentro da seção
+            found==1 { print }
           ' CHANGELOG.md > RELEASE_NOTES.md || true
 
           if [ ! -s RELEASE_NOTES.md ]; then
-            echo "CHANGELOG section not found for $VER" > RELEASE_NOTES.md
+            echo "CHANGELOG section not found." > RELEASE_NOTES.md
           fi
 
       - name: Create GitHub Release
