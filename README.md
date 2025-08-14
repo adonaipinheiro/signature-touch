@@ -1,11 +1,10 @@
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/eea5c9d1-18de-4f85-b277-69dedec337b2" alt="React Native Signature Touch" />
+  <p align="center">A lightweight and flexible React Native library for capturing smooth, customizable signatures using SVG.</p>
+</div>
+
 [![npm version](https://img.shields.io/npm/v/react-native-signature-touch.svg)](https://www.npmjs.com/package/react-native-signature-touch)
  [![CI](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml/badge.svg)](https://github.com/adonaipinheiro/signature-touch/actions/workflows/ci.yml) [![codecov](https://codecov.io/github/adonaipinheiro/signature-touch/graph/badge.svg?token=CS223H7TQR)](https://codecov.io/github/adonaipinheiro/signature-touch) [![install size](https://packagephobia.com/badge?p=react-native-signature-touch)](https://packagephobia.com/result?p=react-native-signature-touch) [![npm downloads](https://img.shields.io/npm/dm/react-native-signature-touch.svg)](https://www.npmjs.com/package/react-native-signature-touch) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-
-
-
-# react-native-signature-touch
-
-A lightweight and flexible React Native library for capturing smooth, customizable signatures using SVG.
 
 ## Example
 <img src="https://github.com/user-attachments/assets/63990a48-5e81-4dbd-8293-c497ce0f3afe" width="250" />
