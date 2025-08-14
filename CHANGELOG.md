@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.4.1 (2025-08-14)</small>
+
+* chore: update README.md ([d88a979](https://github.com/adonaipinheiro/signature-touch/commit/d88a979))
+
 ## 0.4.0 (2025-08-14)
 
 * feat: add issue templates ([427c55a](https://github.com/adonaipinheiro/signature-touch/commit/427c55a))
