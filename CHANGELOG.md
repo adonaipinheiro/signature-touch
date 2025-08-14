@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 (2025-08-14)
+
+* feat: add issue templates ([427c55a](https://github.com/adonaipinheiro/signature-touch/commit/427c55a))
+
 ## <small>0.3.4 (2025-08-13)</small>
 
 * chore: adjust regex ([2405dbe](https://github.com/adonaipinheiro/signature-touch/commit/2405dbe))
